@@ -1,0 +1,152 @@
+[
+    {
+        "id": "celular-01",
+        "titulo": "Samsung Galaxy S9",
+        "imagen": "01.jpg",
+        "categoria": {
+            "nombre": "Celulares",
+            "id": "celulares"
+        },
+        "precio": 2999900
+    },
+    {
+        "id": "celular-02",
+        "titulo": "Iphone 15",
+        "imagen": "02.jpg",
+        "categoria": {
+            "nombre": "Celulares",
+            "id": "celulares"
+        },
+        "precio": 4199900
+    },
+    {
+        "id": "celular-03",
+        "titulo": "Xiaomi Redmi 13C",
+        "imagen": "03.jpg",
+        "categoria": {
+            "nombre": "Celulares",
+            "id": "celulares"
+        },
+        "precio": 579900
+    },
+    {
+        "id": "celular-04",
+        "titulo": "Moto G72",
+        "imagen": "04.jpg",
+        "categoria": {
+            "nombre": "Celulares",
+            "id": "celulares"
+        },
+        "precio": 460750
+    },
+    {
+        "id": "celular-05",
+        "titulo": "Xiaomi Poco F6 5G",
+        "imagen": "05.jpg",
+        "categoria": {
+            "nombre": "Celulares",
+            "id": "celulares"
+        },
+        "precio": 1699900
+    },
+    {
+        "id": "computador-01",
+        "titulo": "MacBook Air M2 2022",
+        "imagen": "01.jpg",
+        "categoria": {
+            "nombre": "Computadores",
+            "id": "computadores"
+        },
+        "precio": 4299000
+    },
+    {
+        "id": "computador-02",
+        "titulo": "Portátil Hp Victus 15-fa0033",
+        "imagen": "02.jpg",
+        "categoria": {
+            "nombre": "Computadores",
+            "id": "computadores"
+        },
+        "precio": 3090000
+    },
+    {
+        "id": "computador-03",
+        "titulo": "Portatil Asus M3604ya",
+        "imagen": "03.jpg",
+        "categoria": {
+            "nombre": "Computadores",
+            "id": "computadores"
+        },
+        "precio": 2659000
+    },
+    {
+        "id": "computador-04",
+        "titulo": "MacBook Air 15 M2",
+        "imagen": "04.jpg",
+        "categoria": {
+            "nombre": "Computadores",
+            "id": "computadores"
+        },
+        "precio": 5192000
+    },
+    {
+        "id": "computador-05",
+        "titulo": "Portátil DELL Inspiron 7391",
+        "imagen": "05.jpg",
+        "categoria": {
+            "nombre": "Computadores",
+            "id": "computadores"
+        },
+        "precio": 7550000
+    },
+    {
+        "id": "audifono-01",
+        "titulo": "JBL Live Pro 2 TWS",
+        "imagen": "01.jpg",
+        "categoria": {
+            "nombre": "Audifonos",
+            "id": "audifonos"
+        },
+        "precio": 749900
+    },
+    {
+        "id": "audifono-02",
+        "titulo": "Jbl Tune 520bt",
+        "imagen": "02.jpg",
+        "categoria": {
+            "nombre": "Audifonos",
+            "id": "audifonos"
+        },
+        "precio": 168000
+    },
+    {
+        "id": "audifono-03",
+        "titulo": "AirPods (2.ª generación)",
+        "imagen": "03.jpg",
+        "categoria": {
+            "nombre": "Audifonos",
+            "id": "audifonos"
+        },
+        "precio": 599000
+    },
+    {
+        "id": "audifono-04",
+        "titulo": "Galaxy Buds2 Pro",
+        "imagen": "04.jpg",
+        "categoria": {
+            "nombre": "Audifonos",
+            "id": "audifonos"
+        },
+        "precio": 477000
+    },
+    {
+        "id": "audifono-05",
+        "titulo": "Redmi buds 3 pro",
+        "imagen": "05.jpg",
+        "categoria": {
+            "nombre": "Audifonos",
+            "id": "audifonos"
+        },
+        "precio": 262500
+    }
+]
