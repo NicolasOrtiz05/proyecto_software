@@ -154,6 +154,7 @@ document.getElementById('btn-add-product').addEventListener('click', () => {
 
     // Guardar en Firebase usando la instancia de Producto
     set(dbRef(database, 'productos/' + productoId), {
+        id: nuevoProducto.id,
         titulo: nuevoProducto.titulo,
         precio: nuevoProducto.precio,
         imagen: nuevoProducto.imagen,

@@ -1,13 +1,22 @@
-import { storage, ref, getDownloadURL } from './firebase-config.js';
+import { database, storage, ref, getDownloadURL, dbRef, get } from './firebase-config.js';
+
 let productos = [];
 
-fetch("./js/productos.json")
-    .then(response => response.json())
-    .then(data => {
-        productos = data;
-        cargarProductos(productos);
-    })
+// Función para cargar productos desde Firebase Database
 
+function cargarProductosFirebase() {
+    const dbReference = dbRef(database, 'productos');
+    get(dbReference).then(snapshot => {
+        if (snapshot.exists()) {
+            productos = Object.values(snapshot.val());
+            cargarProductos(productos);
+        } else {
+            console.log("No hay productos disponibles en Firebase");
+        }
+    }).catch(error => {
+        console.error("Error al cargar productos desde Firebase", error);
+    });
+}
 
 const contenedorProductos = document.querySelector("#contenedor-productos");
 const botonesCategorias = document.querySelectorAll(".boton-categoria");
@@ -20,17 +29,40 @@ function cargarProductos(productosElegidos) {
 
     // Cargar imágenes en un array antes de renderizar
     const imagePromises = productosElegidos.map(producto => {
-        const storageRef = ref(storage, `/${producto.categoria.id}/${producto.imagen}`);
-        return getDownloadURL(storageRef).then(url => {
-            return { ...producto, url };
-        }).catch(error => {
-            console.error("Error al cargar la imagen desde Firebase Storage", error);
-        });
+        // Determinar la carpeta según el tipo de producto
+        let carpeta = '';
+        switch (producto.tipo) {
+            case 'celulares':
+                carpeta = 'celulares';
+                break;
+            case 'computadores':
+                carpeta = 'computadores';
+                break;
+            case 'audifonos':
+                carpeta = 'audifonos';
+                break;
+            default:
+                carpeta = '';
+                break;
+        }
+
+        if (carpeta) {
+            
+            const storageRef = ref(storage, `/${carpeta}/${producto.imagen}`);
+            return getDownloadURL(storageRef).then(url => {
+                return { ...producto, url };
+            }).catch(error => {
+                console.warn(`No se encontró imagen para el producto ${producto.id} en la carpeta ${carpeta}`, error);
+                return null; // No cargamos el producto si no hay imagen
+            });
+        } else {
+            return Promise.resolve(null); // Omitir productos sin tipo válido
+        }
     });
 
     // Espera a que todas las imágenes se carguen
     Promise.all(imagePromises).then(productosConImagenes => {
-        productosConImagenes.forEach(producto => {
+        productosConImagenes.filter(producto => producto !== null).forEach(producto => {
             const div = document.createElement("div");
             div.classList.add("producto");
             div.innerHTML = `
@@ -48,25 +80,20 @@ function cargarProductos(productosElegidos) {
     });
 }
 
-
-
 botonesCategorias.forEach(boton => {
     boton.addEventListener("click", (e) => {
-
         botonesCategorias.forEach(boton => boton.classList.remove("active"));
         e.currentTarget.classList.add("active");
 
         if (e.currentTarget.id != "todos") {
-            const productoCategoria = productos.find(producto => producto.categoria.id === e.currentTarget.id);
-            tituloPrincipal.innerText = productoCategoria.categoria.nombre;
-            const productosBoton = productos.filter(producto => producto.categoria.id === e.currentTarget.id);
-            cargarProductos(productosBoton);
+            const productosFiltrados = productos.filter(producto => producto.tipo === e.currentTarget.id);
+            tituloPrincipal.innerText = e.currentTarget.innerText;
+            cargarProductos(productosFiltrados);
         } else {
             tituloPrincipal.innerText = "Todos los productos";
             cargarProductos(productos);
         }
-
-    })
+    });
 });
 
 function actualizarBotonesAgregar() {
@@ -77,26 +104,22 @@ function actualizarBotonesAgregar() {
     });
 }
 
-let productosEnCarrito;
-
+let productosEnCarrito = [];
 let productosEnCarritoLS = localStorage.getItem("productos-en-carrito");
 
 if (productosEnCarritoLS) {
     productosEnCarrito = JSON.parse(productosEnCarritoLS);
     actualizarNumerito();
-} else {
-    productosEnCarrito = [];
 }
 
 function agregarAlCarrito(e) {
-
     Toastify({
         text: "Producto agregado",
         duration: 3000,
         close: true,
-        gravity: "top", // `top` or `bottom`
-        position: "right", // `left`, `center` or `right`
-        stopOnFocus: true, // Prevents dismissing of toast on hover
+        gravity: "top",
+        position: "right",
+        stopOnFocus: true,
         style: {
             background: "linear-gradient(to right, #2F579C, #617ebd)",
             borderRadius: "2rem",
@@ -104,10 +127,9 @@ function agregarAlCarrito(e) {
             fontSize: ".75rem"
         },
         offset: {
-            x: '1.5rem', // horizontal axis - can be a number or a string indicating unity. eg: '2em'
-            y: '1.5rem' // vertical axis - can be a number or a string indicating unity. eg: '2em'
+            x: '1.5rem',
+            y: '1.5rem'
         },
-        onClick: function () { } // Callback after click
     }).showToast();
 
     const idBoton = e.currentTarget.id;
@@ -122,7 +144,6 @@ function agregarAlCarrito(e) {
     }
 
     actualizarNumerito();
-
     localStorage.setItem("productos-en-carrito", JSON.stringify(productosEnCarrito));
 }
 
@@ -130,3 +151,6 @@ function actualizarNumerito() {
     let nuevoNumerito = productosEnCarrito.reduce((acc, producto) => acc + producto.cantidad, 0);
     numerito.innerText = nuevoNumerito;
 }
+
+// Llamar a la función para cargar los productos desde Firebase
+cargarProductosFirebase();
