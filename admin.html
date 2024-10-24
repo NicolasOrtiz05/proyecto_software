@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - TechShop</title>    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.9.1/font/bootstrap-icons.css">    
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@sweetalert2/theme-minimal/minimal.css">
+    <link rel="stylesheet" href="./css/main.css">
+    
+</head>
+
+<body>
+    <div class="wrapper">
+        <header class="header-desktop">
+            <h1 class="logo">TechShop - Admin</h1>
+            <nav>
+                <ul class="menu">
+                    <li>
+                        <a class="boton-menu boton-volver" href="./index.html">
+                            <i class="bi bi-arrow-return-left"></i> Volver a la tienda
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </header>
+
+        <main>
+            <h2 class="titulo-principal">Panel de Administración</h2>
+
+            <div class="admin-actions">
+                <h3>Añadir Producto</h3>
+                <input type="text" id="producto-titulo" class="input-estilo" placeholder="Título del producto">
+                <input type="number" id="producto-precio" class="input-estilo" placeholder="Precio del producto">
+                <button id="btn-add-product" class="boton-admin">
+                    <i class="bi bi-plus-circle"></i> Añadir Producto
+                </button>
+            </div>
+
+            <div class="admin-actions">
+                <h3>Productos Actuales</h3>
+                <div id="productos-container" class="productos-container">
+                    <div class="loading">Cargando productos...</div>
+                </div>
+            </div>
+
+            <button id="logout-btn" class="boton-aut">
+                <i class="bi bi-box-arrow-right"></i> Cerrar Sesión
+            </button>
+        </main>
+    </div>
+
+    
+    <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script type="module" src="./js/admin.js"></script>
+</body>
+</html>
