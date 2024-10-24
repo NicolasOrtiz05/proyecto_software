@@ -1,5 +1,6 @@
 import { database, dbRef, set, get, remove, child } from './firebase-config.js';
 import { auth, onAuthStateChanged, signOut } from './firebase-config.js';
+import Producto from './producto.js';
 
 
 onAuthStateChanged(auth, (user) => {
@@ -23,7 +24,7 @@ function cargarProductos() {
             for (const id in productos) {
                 const producto = productos[id];
                 const div = document.createElement('div');
-                div.className = 'producto-card';
+                div.className = 'producto   -card';
                 div.innerHTML = `
                     <div class="producto-info">
                         <h4>${producto.titulo}</h4>
@@ -149,9 +150,14 @@ document.getElementById('btn-add-product').addEventListener('click', () => {
     }
 
     const productoId = 'producto_' + new Date().getTime();
+    const nuevoProducto = new Producto(productoId, productoTitulo, Number(productoPrecio), '', ''); // Crea una instancia de Producto
+
+    // Guardar en Firebase usando la instancia de Producto
     set(dbRef(database, 'productos/' + productoId), {
-        titulo: productoTitulo,
-        precio: Number(productoPrecio)
+        titulo: nuevoProducto.titulo,
+        precio: nuevoProducto.precio,
+        imagen: nuevoProducto.imagen,
+        tipo: nuevoProducto.tipo
     }).then(() => {
         Toastify({
             text: "Producto añadido exitosamente",
