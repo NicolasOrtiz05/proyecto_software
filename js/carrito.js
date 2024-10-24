@@ -11,7 +11,6 @@ const botonVaciar = document.querySelector("#carrito-acciones-vaciar");
 const contenedorTotal = document.querySelector("#total");
 const botonComprar = document.querySelector("#carrito-acciones-comprar");
 
-
 function cargarProductosCarrito() {
     if (productosEnCarrito && productosEnCarrito.length > 0) {
         contenedorCarritoVacio.classList.add("disabled");
@@ -21,40 +20,44 @@ function cargarProductosCarrito() {
 
         contenedorCarritoProductos.innerHTML = "";
 
+        // Cargar imágenes de Firebase Storage
         const imagePromises = productosEnCarrito.map(producto => {
-            const storageRef = ref(storage, `/${producto.categoria.id}/${producto.imagen}`);
+            const storageRef = ref(storage, `/${producto.tipo}/${producto.imagen}`);
             return getDownloadURL(storageRef).then(url => {
                 return { ...producto, url };
             }).catch(error => {
                 console.error("Error al cargar la imagen desde Firebase Storage", error);
+                return null; // Si falla, no lo añadimos
             });
         });
 
         Promise.all(imagePromises).then(productosConImagenes => {
             productosConImagenes.forEach(producto => {
-                const div = document.createElement("div");
-                div.classList.add("carrito-producto");
-                div.innerHTML = `
-                    <img class="carrito-producto-imagen" src="${producto.url}" alt="${producto.titulo}">
-                    <div class="carrito-producto-titulo">
-                        <small>Título</small>
-                        <h3>${producto.titulo}</h3>
-                    </div>
-                    <div class="carrito-producto-cantidad">
-                        <small>Cantidad</small>
-                        <p>${producto.cantidad}</p>
-                    </div>
-                    <div class="carrito-producto-precio">
-                        <small>Precio</small>
-                        <p>$${producto.precio}</p>
-                    </div>
-                    <div class="carrito-producto-subtotal">
-                        <small>Subtotal</small>
-                        <p>$${producto.precio * producto.cantidad}</p>
-                    </div>
-                    <button class="carrito-producto-eliminar" id="${producto.id}"><i class="bi bi-trash-fill"></i></button>
-                `;
-                contenedorCarritoProductos.append(div);
+                if (producto) { // Solo mostrar productos que tienen imagen válida
+                    const div = document.createElement("div");
+                    div.classList.add("carrito-producto");
+                    div.innerHTML = `
+                        <img class="carrito-producto-imagen" src="${producto.url}" alt="${producto.titulo}">
+                        <div class="carrito-producto-titulo">
+                            <small>Título</small>
+                            <h3>${producto.titulo}</h3>
+                        </div>
+                        <div class="carrito-producto-cantidad">
+                            <small>Cantidad</small>
+                            <p>${producto.cantidad}</p>
+                        </div>
+                        <div class="carrito-producto-precio">
+                            <small>Precio</small>
+                            <p>$${producto.precio}</p>
+                        </div>
+                        <div class="carrito-producto-subtotal">
+                            <small>Subtotal</small>
+                            <p>$${producto.precio * producto.cantidad}</p>
+                        </div>
+                        <button class="carrito-producto-eliminar" id="${producto.id}"><i class="bi bi-trash-fill"></i></button>
+                    `;
+                    contenedorCarritoProductos.append(div);
+                }
             });
 
             actualizarBotonesEliminar();
@@ -67,7 +70,6 @@ function cargarProductosCarrito() {
         contenedorCarritoComprado.classList.add("disabled");
     }
 }
-
 
 cargarProductosCarrito();
 
@@ -84,9 +86,9 @@ function eliminarDelCarrito(e) {
         text: "Producto eliminado",
         duration: 3000,
         close: true,
-        gravity: "top", // `top` or `bottom`
-        position: "right", // `left`, `center` or `right`
-        stopOnFocus: true, // Prevents dismissing of toast on hover
+        gravity: "top",
+        position: "right",
+        stopOnFocus: true,
         style: {
             background: "linear-gradient(to right, #2F579C, #617ebd)",
             borderRadius: "2rem",
@@ -94,10 +96,9 @@ function eliminarDelCarrito(e) {
             fontSize: ".75rem"
         },
         offset: {
-            x: '1.5rem', // horizontal axis - can be a number or a string indicating unity. eg: '2em'
-            y: '1.5rem' // vertical axis - can be a number or a string indicating unity. eg: '2em'
-        },
-        onClick: function () { } // Callback after click
+            x: '1.5rem',
+            y: '1.5rem'
+        }
     }).showToast();
 
     const idBoton = e.currentTarget.id;
@@ -107,12 +108,10 @@ function eliminarDelCarrito(e) {
     cargarProductosCarrito();
 
     localStorage.setItem("productos-en-carrito", JSON.stringify(productosEnCarrito));
-
 }
 
 botonVaciar.addEventListener("click", vaciarCarrito);
 function vaciarCarrito() {
-
     Swal.fire({
         title: '¿Estás seguro?',
         icon: 'question',
@@ -130,7 +129,6 @@ function vaciarCarrito() {
     })
 }
 
-
 function actualizarTotal() {
     const totalCalculado = productosEnCarrito.reduce((acc, producto) => acc + (producto.precio * producto.cantidad), 0);
     total.innerText = `$${totalCalculado}`;
@@ -138,7 +136,6 @@ function actualizarTotal() {
 
 botonComprar.addEventListener("click", comprarCarrito);
 function comprarCarrito() {
-
     productosEnCarrito.length = 0;
     localStorage.setItem("productos-en-carrito", JSON.stringify(productosEnCarrito));
 
@@ -146,5 +143,4 @@ function comprarCarrito() {
     contenedorCarritoProductos.classList.add("disabled");
     contenedorCarritoAcciones.classList.add("disabled");
     contenedorCarritoComprado.classList.remove("disabled");
-
 }
