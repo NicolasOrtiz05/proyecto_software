@@ -6,6 +6,9 @@ const userInfo = document.getElementById('user-info');
 const signUpLink = document.getElementById('sign-up-link');
 const registro = document.getElementById('registro');
 
+
+const adminEmail = "admin@example1.com"; 
+
 onAuthStateChanged(auth, (user) => {
 	if (user) {
 		const userEmail = user.email || "Usuario no identificado";
@@ -14,6 +17,13 @@ onAuthStateChanged(auth, (user) => {
 		logoutBtn.style.display = 'block';
 		loginForm.style.display = 'none';
 		registro.style.display = 'none';
+
+		if (user.email === adminEmail) {
+            window.location.href = './admin.html'; 
+        } else {
+            window.location.href = './index.html'; 
+        }
+
 	} else {
 		userInfo.textContent = '';
 		logoutBtn.style.display = 'none';
@@ -87,6 +97,8 @@ signUpLink.addEventListener('click', () => {
 		}
 	});
 });
+
+
 
 // Cerrar sesión
 logoutBtn.addEventListener('click', () => {
