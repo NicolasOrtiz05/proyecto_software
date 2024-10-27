@@ -1,4 +1,4 @@
-import { database, storage, ref, getDownloadURL, dbRef, get, set, remove, uploadBytes } from './firebase-config.js';
+import { database, storage, ref, getDownloadURL, dbRef, get, set, remove, uploadBytes, deleteObject } from './firebase-config.js';
 import { auth, onAuthStateChanged, signOut } from './firebase-config.js';
 import Producto from './producto.js';
 
@@ -67,6 +67,9 @@ function cargarProductosConImagenes(productos) {
                 </div>
             `;
             productosContainer.appendChild(div);
+
+            div.querySelector('.btn-edit').addEventListener('click', () => editarProducto(producto.id));
+            div.querySelector('.btn-delete').addEventListener('click', () => eliminarProducto(producto.id));
         });
     });
 }
@@ -89,11 +92,12 @@ document.getElementById('btn-add-product').addEventListener('click', () => {
     }
 
     const productoId = 'producto_' + new Date().getTime();
-    const storageReference = ref(storage, `/${productoTipo}/${productoImagen.name}`);
+    const uniqueImageName = `${productoImagen.name.split('.')[0]}_${new Date().getTime()}.${productoImagen.name.split('.').pop()}`;
+    const storageReference = ref(storage, `/${productoTipo}/${uniqueImageName}`);
 
     uploadBytes(storageReference, productoImagen).then((snapshot) => {
         getDownloadURL(snapshot.ref).then((url) => {
-            const nuevoProducto = new Producto(productoId, productoTitulo, Number(productoPrecio), productoImagen.name, productoTipo);
+            const nuevoProducto = new Producto(productoId, productoTitulo, Number(productoPrecio), uniqueImageName, productoTipo);
 
             set(dbRef(database, 'productos/' + productoId), {
                 id: nuevoProducto.id,
@@ -137,7 +141,6 @@ document.getElementById('btn-add-product').addEventListener('click', () => {
 // Se edita el producto
 window.editarProducto = function (productoId) {
     editingProductId = productoId;
-
     get(dbRef(database, 'productos/' + productoId)).then((snapshot) => {
         if (snapshot.exists()) {
             const producto = snapshot.val();
@@ -190,15 +193,24 @@ window.editarProducto = function (productoId) {
                     const { titulo, precio, tipo, imagen } = result.value;
 
                     if (imagen) {
-                        const storageReference = ref(storage, `/${tipo}/${imagen.name}`);
+                        const uniqueImageName = `${imagen.name.split('.')[0]}_${new Date().getTime()}.${imagen.name.split('.').pop()}`;
+                        const storageReference = ref(storage, `/${tipo}/${uniqueImageName}`);
+                        const oldImageRef = ref(storage, `/${producto.tipo}/${producto.imagen}`);
+
+                        // Subir nueva imagen y eliminar la antigua
                         uploadBytes(storageReference, imagen).then((snapshot) => {
                             getDownloadURL(snapshot.ref).then((url) => {
                                 set(dbRef(database, 'productos/' + productoId), {
                                     titulo: titulo,
                                     precio: Number(precio),
                                     tipo: tipo,
-                                    imagen: imagen.name
+                                    imagen: uniqueImageName
                                 }).then(() => {
+                                    // Eliminar la imagen antigua
+                                    deleteObject(oldImageRef).catch((error) => {
+                                        console.error('Error al eliminar la imagen antigua:', error);
+                                    });
+
                                     Toastify({
                                         text: "Producto actualizado exitosamente",
                                         style: {
@@ -265,35 +277,55 @@ window.editarProducto = function (productoId) {
 
 // Eliminar producto
 window.eliminarProducto = function (productoId) {
-    Swal.fire({
-        title: '¿Estás seguro?',
-        text: 'Esta acción no se puede deshacer',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'Sí, eliminar',
-        cancelButtonText: 'Cancelar'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            remove(dbRef(database, 'productos/' + productoId))
-                .then(() => {
-                    Toastify({
-                        text: "Producto eliminado exitosamente",
-                        style: {
-                            background: "linear-gradient(to right, #00b09b, #96c93d)",
-                        }
-                    }).showToast();
-                    cargarProductos();
-                })
-                .catch((error) => {
-                    console.error('Error al eliminar producto:', error);
-                    Toastify({
-                        text: "Error al eliminar producto",
-                        style: {
-                            background: "linear-gradient(to right, #ff0000, #ff5555)",
-                        }
-                    }).showToast();
-                });
+    get(dbRef(database, 'productos/' + productoId)).then((snapshot) => {
+        if (snapshot.exists()) {
+            const producto = snapshot.val();
+            const imageRef = ref(storage, `/${producto.tipo}/${producto.imagen}`);
+
+            Swal.fire({
+                title: '¿Estás seguro?',
+                text: 'Esta acción no se puede deshacer',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    remove(dbRef(database, 'productos/' + productoId))
+                        .then(() => {
+                            // Eliminar la imagen del producto
+                            deleteObject(imageRef).catch((error) => {
+                                console.error('Error al eliminar la imagen:', error);
+                            });
+
+                            Toastify({
+                                text: "Producto eliminado exitosamente",
+                                style: {
+                                    background: "linear-gradient(to right, #00b09b, #96c93d)",
+                                }
+                            }).showToast();
+                            cargarProductos();
+                        })
+                        .catch((error) => {
+                            console.error('Error al eliminar producto:', error);
+                            Toastify({
+                                text: "Error al eliminar producto",
+                                style: {
+                                    background: "linear-gradient(to right, #ff0000, #ff5555)",
+                                }
+                            }).showToast();
+                        });
+                }
+            });
         }
+    }).catch((error) => {
+        console.error('Error al obtener producto:', error);
+        Toastify({
+            text: "Error al cargar datos del producto",
+            style: {
+                background: "linear-gradient(to right, #ff0000, #ff5555)",
+            }
+        }).showToast();
     });
 };
 
