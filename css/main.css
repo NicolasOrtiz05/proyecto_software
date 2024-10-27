@@ -195,6 +195,17 @@ main {
     border-radius: 1rem;
 }
 
+.producto-imagen-admin {
+    max-width: 100%;
+    border-radius: 1rem;
+    width: 150px;
+    /* Limitar el ancho máximo */
+    height: 150px;
+    /* Limitar la altura máxima */
+    object-fit: cover;
+    /* Asegurarse de que la imagen se ajuste bien */
+}
+
 .producto-detalles {
     background-color: var(--clr-blue);
     color: var(--clr-white);
@@ -303,6 +314,7 @@ main {
     border-bottom-left-radius: 1rem;
     gap: 1rem;
 }
+
 .admin-actions {
     margin: 20px 0;
     padding: 15px;
@@ -355,7 +367,7 @@ main {
     justify-content: space-between;
     align-items: center;
     background-color: white;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .producto-info h4 {
@@ -493,7 +505,7 @@ main {
     font-style: italic;
     color: #666;
 }
-   
+
 /* Estilos para el modal de SweetAlert2 */
 .swal2-input {
     margin: 0.5rem auto;
