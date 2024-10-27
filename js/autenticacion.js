@@ -20,7 +20,9 @@ onAuthStateChanged(auth, (user) => {
 
 		if (user.email === adminEmail) {
             window.location.href = './admin.html'; 
-        } 
+        } else {
+            window.location.href = './autenticacion.html'; 
+        }
 
 	} else {
 		userInfo.textContent = '';

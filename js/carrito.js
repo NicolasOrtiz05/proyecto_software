@@ -1,6 +1,4 @@
-import { storage, ref, getDownloadURL, dbRef } from './firebase-config.js';
-import { auth, onAuthStateChanged, set, database } from './firebase-config.js'; // Importamos todo desde firebase-config.js
-
+import { storage, ref, getDownloadURL } from './firebase-config.js';
 let productosEnCarrito = localStorage.getItem("productos-en-carrito");
 productosEnCarrito = JSON.parse(productosEnCarrito);
 
@@ -138,61 +136,11 @@ function actualizarTotal() {
 
 botonComprar.addEventListener("click", comprarCarrito);
 function comprarCarrito() {
-    onAuthStateChanged(auth, (user) => {
-        if (user) {
-            // Preparar datos del pedido
-            
-            set(dbRef(database, 'pedidos/' + user.uid), {
-                uid: user.uid,
-                productos: productosEnCarrito.map(producto => ({
-                    id: producto.id,
-                    titulo: producto.titulo,
-                    cantidad: producto.cantidad,
-                    precio: producto.precio,
-                    subtotal: producto.precio * producto.cantidad
-                })),
-                total: productosEnCarrito.reduce((acc, producto) => acc + (producto.precio * producto.cantidad), 0),
-                fecha: new Date().toISOString()
-            }).then(() => {
-                    Swal.fire({
-                        title: '¡Compra realizada!',
-                        text: 'Tu pedido ha sido guardado con éxito.',
-                        icon: 'success'
-                    });
+    productosEnCarrito.length = 0;
+    localStorage.setItem("productos-en-carrito", JSON.stringify(productosEnCarrito));
 
-                    // Limpiar carrito
-                    productosEnCarrito.length = 0;
-                    localStorage.setItem("productos-en-carrito", JSON.stringify(productosEnCarrito));
-                    cargarProductosCarrito();
-
-                    // Mostrar pantalla de "Compra realizada"
-                    contenedorCarritoVacio.classList.add("disabled");
-                    contenedorCarritoProductos.classList.add("disabled");
-                    contenedorCarritoAcciones.classList.add("disabled");
-                    contenedorCarritoComprado.classList.remove("disabled");
-                })
-                .catch(error => {
-                    console.error("Error al guardar el pedido en Firebase:", error);
-                    Swal.fire({
-                        title: 'Error',
-                        text: 'No se pudo completar la compra.',
-                        icon: 'error'
-                    });
-                });
-        } else {
-            Swal.fire({
-                title: 'Para comprar tienes que iniciar sesión',
-                icon: 'question',
-                html: `¿Quieres iniciar sesión?`,
-                showCancelButton: true,
-                focusConfirm: false,
-                confirmButtonText: 'Sí',
-                cancelButtonText: 'No'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    window.location.href = './autenticacion.html'; 
-                }
-            });
-        }
-    });
+    contenedorCarritoVacio.classList.add("disabled");
+    contenedorCarritoProductos.classList.add("disabled");
+    contenedorCarritoAcciones.classList.add("disabled");
+    contenedorCarritoComprado.classList.remove("disabled");
 }
