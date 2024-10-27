@@ -1,7 +1,6 @@
-import { database, dbRef, set, get, remove, child } from './firebase-config.js';
+import { database, storage, ref, getDownloadURL, dbRef, get, set, remove, uploadBytes, deleteObject } from './firebase-config.js';
 import { auth, onAuthStateChanged, signOut } from './firebase-config.js';
 import Producto from './producto.js';
-
 
 onAuthStateChanged(auth, (user) => {
     if (!user) {
@@ -11,40 +10,19 @@ onAuthStateChanged(auth, (user) => {
 
 const productosContainer = document.getElementById('productos-container');
 const logoutBtn = document.getElementById('logout-btn');
-const modalEditForm = document.getElementById('modal-edit-form');
 let editingProductId = null;
 
 // Cargar productos
 function cargarProductos() {
-    get(dbRef(database, 'productos')).then((snapshot) => {
+    const dbReference = dbRef(database, 'productos');
+    get(dbReference).then(snapshot => {
         if (snapshot.exists()) {
-            const productos = snapshot.val();
-            productosContainer.innerHTML = '';
-
-            for (const id in productos) {
-                const producto = productos[id];
-                const div = document.createElement('div');
-                div.className = 'producto   -card';
-                div.innerHTML = `
-                    <div class="producto-info">
-                        <h4>${producto.titulo}</h4>
-                        <p>$${producto.precio}</p>
-                    </div>
-                    <div class="producto-acciones">
-                        <button onclick="editarProducto('${id}')" class="btn-edit">
-                            <i class="bi bi-pencil"></i> Editar
-                        </button>
-                        <button onclick="eliminarProducto('${id}')" class="btn-delete">
-                            <i class="bi bi-trash"></i> Eliminar
-                        </button>
-                    </div>
-                `;
-                productosContainer.appendChild(div);
-            }
+            const productos = Object.values(snapshot.val());
+            cargarProductosConImagenes(productos);
         } else {
             productosContainer.innerHTML = '<p class="no-productos">No hay productos disponibles</p>';
         }
-    }).catch((error) => {
+    }).catch(error => {
         console.error('Error al obtener productos:', error);
         Toastify({
             text: "Error al cargar productos",
@@ -55,16 +33,118 @@ function cargarProductos() {
     });
 }
 
+function cargarProductosConImagenes(productos) {
+    productosContainer.innerHTML = "";
+
+    const imagePromises = productos.map(producto => {
+        const storageReference = ref(storage, `/${producto.tipo}/${producto.imagen}`);
+        return getDownloadURL(storageReference).then(url => {
+            return { ...producto, url };
+        }).catch(error => {
+            console.warn(`No se encontró imagen para el producto ${producto.id}`, error);
+            return null;
+        });
+    });
+
+    Promise.all(imagePromises).then(productosConImagenes => {
+        productosConImagenes.filter(producto => producto !== null).forEach(producto => {
+            const div = document.createElement('div');
+            div.className = 'producto-card';
+            div.innerHTML = `
+                <div class="producto-info">
+                    <h4>${producto.titulo}</h4>
+                    <p>$${producto.precio}</p>
+                    <p>${producto.tipo}</p>
+                    <img src="${producto.url}" alt="${producto.titulo}" class="producto-imagen-admin">
+                </div>
+                <div class="producto-acciones">
+                    <button onclick="editarProducto('${producto.id}')" class="btn-edit">
+                        <i class="bi bi-pencil"></i> Editar
+                    </button>
+                    <button onclick="eliminarProducto('${producto.id}')" class="btn-delete">
+                        <i class="bi bi-trash"></i> Eliminar
+                    </button>
+                </div>
+            `;
+            productosContainer.appendChild(div);
+
+            div.querySelector('.btn-edit').addEventListener('click', () => editarProducto(producto.id));
+            div.querySelector('.btn-delete').addEventListener('click', () => eliminarProducto(producto.id));
+        });
+    });
+}
+
+// Añadir producto
+document.getElementById('btn-add-product').addEventListener('click', () => {
+    const productoTitulo = document.getElementById('producto-titulo').value;
+    const productoPrecio = document.getElementById('producto-precio').value;
+    const productoTipo = document.getElementById('producto-tipo').value;
+    const productoImagen = document.getElementById('producto-imagen').files[0];
+
+    if (!productoTitulo || !productoPrecio || !productoTipo || !productoImagen) {
+        Toastify({
+            text: "Por favor completa todos los campos",
+            style: {
+                background: "linear-gradient(to right, #ff0000, #ff5555)",
+            }
+        }).showToast();
+        return;
+    }
+
+    const productoId = 'producto_' + new Date().getTime();
+    const uniqueImageName = `${productoImagen.name.split('.')[0]}_${new Date().getTime()}.${productoImagen.name.split('.').pop()}`;
+    const storageReference = ref(storage, `/${productoTipo}/${uniqueImageName}`);
+
+    uploadBytes(storageReference, productoImagen).then((snapshot) => {
+        getDownloadURL(snapshot.ref).then((url) => {
+            const nuevoProducto = new Producto(productoId, productoTitulo, Number(productoPrecio), uniqueImageName, productoTipo);
+
+            set(dbRef(database, 'productos/' + productoId), {
+                id: nuevoProducto.id,
+                titulo: nuevoProducto.titulo,
+                precio: nuevoProducto.precio,
+                imagen: nuevoProducto.imagen,
+                tipo: nuevoProducto.tipo
+            }).then(() => {
+                Toastify({
+                    text: "Producto añadido exitosamente",
+                    style: {
+                        background: "linear-gradient(to right, #00b09b, #96c93d)",
+                    }
+                }).showToast();
+                cargarProductos();
+                document.getElementById('producto-titulo').value = '';
+                document.getElementById('producto-precio').value = '';
+                document.getElementById('producto-tipo').value = '';
+                document.getElementById('producto-imagen').value = '';
+            }).catch((error) => {
+                console.error('Error al añadir producto:', error);
+                Toastify({
+                    text: "Error al añadir producto",
+                    style: {
+                        background: "linear-gradient(to right, #ff0000, #ff5555)",
+                    }
+                }).showToast();
+            });
+        });
+    }).catch((error) => {
+        console.error('Error al subir imagen:', error);
+        Toastify({
+            text: "Error al subir imagen",
+            style: {
+                background: "linear-gradient(to right, #ff0000, #ff5555)",
+            }
+        }).showToast();
+    });
+});
+
 // Se edita el producto
-window.editarProducto = function(productoId) {
+window.editarProducto = function (productoId) {
     editingProductId = productoId;
-    
-    
     get(dbRef(database, 'productos/' + productoId)).then((snapshot) => {
         if (snapshot.exists()) {
             const producto = snapshot.val();
-            
-           
+
             Swal.fire({
                 title: 'Editar Producto',
                 html: `
@@ -82,6 +162,17 @@ window.editarProducto = function(productoId) {
                         placeholder="Precio del producto" 
                         value="${producto.precio}"
                     >
+                    <select id="edit-tipo" class="swal2-input">
+                        <option value="celulares" ${producto.tipo === 'celulares' ? 'selected' : ''}>Celulares</option>
+                        <option value="computadores" ${producto.tipo === 'computadores' ? 'selected' : ''}>Computadores</option>
+                        <option value="audifonos" ${producto.tipo === 'audifonos' ? 'selected' : ''}>Audífonos</option>
+                        <!-- Añade más opciones según sea necesario -->
+                    </select>
+                    <input 
+                        type="file" 
+                        id="edit-imagen" 
+                        class="swal2-input"
+                    >
                 `,
                 showCancelButton: true,
                 confirmButtonText: 'Guardar',
@@ -89,37 +180,87 @@ window.editarProducto = function(productoId) {
                 preConfirm: () => {
                     const titulo = document.getElementById('edit-titulo').value;
                     const precio = document.getElementById('edit-precio').value;
-                    if (!titulo || !precio) {
+                    const tipo = document.getElementById('edit-tipo').value;
+                    const imagen = document.getElementById('edit-imagen').files[0];
+                    if (!titulo || !precio || !tipo) {
                         Swal.showValidationMessage('Por favor completa todos los campos');
                         return false;
                     }
-                    return { titulo, precio };
+                    return { titulo, precio, tipo, imagen };
                 }
             }).then((result) => {
                 if (result.isConfirmed) {
-                    const { titulo, precio } = result.value;
-                    
-                    
-                    set(dbRef(database, 'productos/' + productoId), {
-                        titulo: titulo,
-                        precio: Number(precio)
-                    }).then(() => {
-                        Toastify({
-                            text: "Producto actualizado exitosamente",
-                            style: {
-                                background: "linear-gradient(to right, #00b09b, #96c93d)",
-                            }
-                        }).showToast();
-                        cargarProductos();
-                    }).catch((error) => {
-                        console.error('Error al actualizar producto:', error);
-                        Toastify({
-                            text: "Error al actualizar producto",
-                            style: {
-                                background: "linear-gradient(to right, #ff0000, #ff5555)",
-                            }
-                        }).showToast();
-                    });
+                    const { titulo, precio, tipo, imagen } = result.value;
+
+                    if (imagen) {
+                        const uniqueImageName = `${imagen.name.split('.')[0]}_${new Date().getTime()}.${imagen.name.split('.').pop()}`;
+                        const storageReference = ref(storage, `/${tipo}/${uniqueImageName}`);
+                        const oldImageRef = ref(storage, `/${producto.tipo}/${producto.imagen}`);
+
+                        // Subir nueva imagen y eliminar la antigua
+                        uploadBytes(storageReference, imagen).then((snapshot) => {
+                            getDownloadURL(snapshot.ref).then((url) => {
+                                set(dbRef(database, 'productos/' + productoId), {
+                                    titulo: titulo,
+                                    precio: Number(precio),
+                                    tipo: tipo,
+                                    imagen: uniqueImageName
+                                }).then(() => {
+                                    // Eliminar la imagen antigua
+                                    deleteObject(oldImageRef).catch((error) => {
+                                        console.error('Error al eliminar la imagen antigua:', error);
+                                    });
+
+                                    Toastify({
+                                        text: "Producto actualizado exitosamente",
+                                        style: {
+                                            background: "linear-gradient(to right, #00b09b, #96c93d)",
+                                        }
+                                    }).showToast();
+                                    cargarProductos();
+                                }).catch((error) => {
+                                    console.error('Error al actualizar producto:', error);
+                                    Toastify({
+                                        text: "Error al actualizar producto",
+                                        style: {
+                                            background: "linear-gradient(to right, #ff0000, #ff5555)",
+                                        }
+                                    }).showToast();
+                                });
+                            });
+                        }).catch((error) => {
+                            console.error('Error al subir imagen:', error);
+                            Toastify({
+                                text: "Error al subir imagen",
+                                style: {
+                                    background: "linear-gradient(to right, #ff0000, #ff5555)",
+                                }
+                            }).showToast();
+                        });
+                    } else {
+                        set(dbRef(database, 'productos/' + productoId), {
+                            titulo: titulo,
+                            precio: Number(precio),
+                            tipo: tipo,
+                            imagen: producto.imagen
+                        }).then(() => {
+                            Toastify({
+                                text: "Producto actualizado exitosamente",
+                                style: {
+                                    background: "linear-gradient(to right, #00b09b, #96c93d)",
+                                }
+                            }).showToast();
+                            cargarProductos();
+                        }).catch((error) => {
+                            console.error('Error al actualizar producto:', error);
+                            Toastify({
+                                text: "Error al actualizar producto",
+                                style: {
+                                    background: "linear-gradient(to right, #ff0000, #ff5555)",
+                                }
+                            }).showToast();
+                        });
+                    }
                 }
             });
         }
@@ -134,83 +275,57 @@ window.editarProducto = function(productoId) {
     });
 };
 
-// Añadir producto
-document.getElementById('btn-add-product').addEventListener('click', () => {
-    const productoTitulo = document.getElementById('producto-titulo').value;
-    const productoPrecio = document.getElementById('producto-precio').value;
-    
-    if (!productoTitulo || !productoPrecio) {
-        Toastify({
-            text: "Por favor completa todos los campos",
-            style: {
-                background: "linear-gradient(to right, #ff0000, #ff5555)",
-            }
-        }).showToast();
-        return;
-    }
-
-    const productoId = 'producto_' + new Date().getTime();
-    const nuevoProducto = new Producto(productoId, productoTitulo, Number(productoPrecio), '', ''); // Crea una instancia de Producto
-
-    // Guardar en Firebase usando la instancia de Producto
-    set(dbRef(database, 'productos/' + productoId), {
-        id: nuevoProducto.id,
-        titulo: nuevoProducto.titulo,
-        precio: nuevoProducto.precio,
-        imagen: nuevoProducto.imagen,
-        tipo: nuevoProducto.tipo
-    }).then(() => {
-        Toastify({
-            text: "Producto añadido exitosamente",
-            style: {
-                background: "linear-gradient(to right, #00b09b, #96c93d)",
-            }
-        }).showToast();
-        cargarProductos();
-        document.getElementById('producto-titulo').value = '';
-        document.getElementById('producto-precio').value = '';
-    }).catch((error) => {
-        console.error('Error al añadir producto:', error);
-        Toastify({
-            text: "Error al añadir producto",
-            style: {
-                background: "linear-gradient(to right, #ff0000, #ff5555)",
-            }
-        }).showToast();
-    });
-});
-
 // Eliminar producto
-window.eliminarProducto = function(productoId) {
-    Swal.fire({
-        title: '¿Estás seguro?',
-        text: 'Esta acción no se puede deshacer',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'Sí, eliminar',
-        cancelButtonText: 'Cancelar'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            remove(dbRef(database, 'productos/' + productoId))
-                .then(() => {
-                    Toastify({
-                        text: "Producto eliminado exitosamente",
-                        style: {
-                            background: "linear-gradient(to right, #00b09b, #96c93d)",
-                        }
-                    }).showToast();
-                    cargarProductos();
-                })
-                .catch((error) => {
-                    console.error('Error al eliminar producto:', error);
-                    Toastify({
-                        text: "Error al eliminar producto",
-                        style: {
-                            background: "linear-gradient(to right, #ff0000, #ff5555)",
-                        }
-                    }).showToast();
-                });
+window.eliminarProducto = function (productoId) {
+    get(dbRef(database, 'productos/' + productoId)).then((snapshot) => {
+        if (snapshot.exists()) {
+            const producto = snapshot.val();
+            const imageRef = ref(storage, `/${producto.tipo}/${producto.imagen}`);
+
+            Swal.fire({
+                title: '¿Estás seguro?',
+                text: 'Esta acción no se puede deshacer',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    remove(dbRef(database, 'productos/' + productoId))
+                        .then(() => {
+                            // Eliminar la imagen del producto
+                            deleteObject(imageRef).catch((error) => {
+                                console.error('Error al eliminar la imagen:', error);
+                            });
+
+                            Toastify({
+                                text: "Producto eliminado exitosamente",
+                                style: {
+                                    background: "linear-gradient(to right, #00b09b, #96c93d)",
+                                }
+                            }).showToast();
+                            cargarProductos();
+                        })
+                        .catch((error) => {
+                            console.error('Error al eliminar producto:', error);
+                            Toastify({
+                                text: "Error al eliminar producto",
+                                style: {
+                                    background: "linear-gradient(to right, #ff0000, #ff5555)",
+                                }
+                            }).showToast();
+                        });
+                }
+            });
         }
+    }).catch((error) => {
+        console.error('Error al obtener producto:', error);
+        Toastify({
+            text: "Error al cargar datos del producto",
+            style: {
+                background: "linear-gradient(to right, #ff0000, #ff5555)",
+            }
+        }).showToast();
     });
 };
 
@@ -241,6 +356,5 @@ logoutBtn.addEventListener('click', () => {
         }
     });
 });
-
 
 cargarProductos();
