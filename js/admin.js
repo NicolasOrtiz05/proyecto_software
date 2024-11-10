@@ -14,49 +14,15 @@ let editingProductId = null;
 
 // Cargar productos
 function cargarProductos() {
-    get(dbRef(database, 'productos')).then((snapshot) => {
+    const dbReference = dbRef(database, 'productos');
+    get(dbReference).then(snapshot => {
         if (snapshot.exists()) {
-            const productos = snapshot.val();
-            productosContainer.innerHTML = '';
-
-            const imagePromises = Object.keys(productos).map(id => {
-                const producto = productos[id];
-                const storageReference = ref(storage, `/${producto.tipo}/${producto.imagen}`);
-                return getDownloadURL(storageReference).then(url => {
-                    return { ...producto, id, url };
-                }).catch(error => {
-                    console.warn(`No se encontró imagen para el producto ${producto.id}`, error);
-                    return { ...producto, id, url: '' };
-                });
-            });
-
-            Promise.all(imagePromises).then(productosConImagenes => {
-                productosConImagenes.forEach(producto => {
-                    const div = document.createElement('div');
-                    div.className = 'producto-card';
-                    div.innerHTML = `
-                        <div class="producto-info">
-                            <h4>${producto.titulo}</h4>
-                            <p>$${producto.precio}</p>
-                            <p>${producto.tipo}</p>
-                            <img src="${producto.url}" alt="${producto.titulo}" class="producto-imagen-admin">
-                        </div>
-                        <div class="producto-acciones">
-                            <button onclick="editarProducto('${producto.id}')" class="btn-edit">
-                                <i class="bi bi-pencil"></i> Editar
-                            </button>
-                            <button onclick="eliminarProducto('${producto.id}')" class="btn-delete">
-                                <i class="bi bi-trash"></i> Eliminar
-                            </button>
-                        </div>
-                    `;
-                    productosContainer.appendChild(div);
-                });
-            });
+            const productos = Object.values(snapshot.val());
+            cargarProductosConImagenes(productos);
         } else {
             productosContainer.innerHTML = '<p class="no-productos">No hay productos disponibles</p>';
         }
-    }).catch((error) => {
+    }).catch(error => {
         console.error('Error al obtener productos:', error);
         Toastify({
             text: "Error al cargar productos",
@@ -64,6 +30,47 @@ function cargarProductos() {
                 background: "linear-gradient(to right, #ff0000, #ff5555)",
             }
         }).showToast();
+    });
+}
+
+function cargarProductosConImagenes(productos) {
+    productosContainer.innerHTML = "";
+
+    const imagePromises = productos.map(producto => {
+        const storageReference = ref(storage, `/${producto.tipo}/${producto.imagen}`);
+        return getDownloadURL(storageReference).then(url => {
+            return { ...producto, url };
+        }).catch(error => {
+            console.warn(`No se encontró imagen para el producto ${producto.id}`, error);
+            return null;
+        });
+    });
+
+    Promise.all(imagePromises).then(productosConImagenes => {
+        productosConImagenes.filter(producto => producto !== null).forEach(producto => {
+            const div = document.createElement('div');
+            div.className = 'producto-card';
+            div.innerHTML = `
+                <div class="producto-info">
+                    <h4>${producto.titulo}</h4>
+                    <p>$${producto.precio}</p>
+                    <p>${producto.tipo}</p>
+                    <img src="${producto.url}" alt="${producto.titulo}" class="producto-imagen-admin">
+                </div>
+                <div class="producto-acciones">
+                    <button onclick="editarProducto('${producto.id}')" class="btn-edit">
+                        <i class="bi bi-pencil"></i> Editar
+                    </button>
+                    <button onclick="eliminarProducto('${producto.id}')" class="btn-delete">
+                        <i class="bi bi-trash"></i> Eliminar
+                    </button>
+                </div>
+            `;
+            productosContainer.appendChild(div);
+
+            div.querySelector('.btn-edit').addEventListener('click', () => editarProducto(producto.id));
+            div.querySelector('.btn-delete').addEventListener('click', () => eliminarProducto(producto.id));
+        });
     });
 }
 
